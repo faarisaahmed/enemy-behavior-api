@@ -58,7 +58,7 @@ The single most useful contribution is a survey file.
 
 1. Drop both DLLs in `BepInEx/plugins/` (see [Install](#install))
 2. Play normally - the survey records by itself and writes every 30 seconds
-3. Send the JSON from `BepInEx/plugins/EnemyBehaviorApi.Example/surveys/`
+3. Send the JSON from `BepInEx/plugins/EnemyBehaviorApi.Survey/surveys/`
 
 It is strictly read-only: it never writes to an enemy, so nothing behaves differently
 while it runs. Areas and bosses not listed under [Status](#status) are the most valuable.
@@ -70,11 +70,19 @@ the ground truth the classifier gets tuned against.
 
 Requires [BepInEx](https://github.com/BepInEx/BepInEx) for Silksong.
 
-1. Download `EnemyBehaviorApi.dll` and `EnemyBehaviorApi.Example.dll` from
-   [Releases](../../releases)
+1. Download from [Releases](../../releases)
 2. `EnemyBehaviorApi.dll` → `BepInEx/plugins/EnemyBehaviorApi/`
-3. `EnemyBehaviorApi.Example.dll` → `BepInEx/plugins/EnemyBehaviorApi.Example/`
+3. `EnemyBehaviorApi.Survey.dll` → `BepInEx/plugins/EnemyBehaviorApi.Survey/`
 4. Launch. The survey starts on its own; `BepInEx/LogOutput.log` confirms it.
+
+`EnemyBehaviorApi.Example.dll` is optional and **not needed to help with data**. It
+demonstrates all three tiers, which means it writes to and drives enemies through paths
+nothing has tested. It is off unless you set `EnableTierDemo = true`, and you should leave
+it that way for now.
+
+The survey ships as a separate assembly so "this cannot touch your enemies" is a property
+of the binary rather than a promise in a readme - it contains no call to any write-capable
+API method, which you can check yourself with any IL disassembler.
 
 Config lands in `BepInEx/config/` after the first run. `VerboseLogging = true` on the API
 is worth setting - without it, discovery messages go to `LogDebug`, which BepInEx's disk
@@ -287,7 +295,8 @@ EnemyBehaviorApi/
   Annotations/            JSON corrections
   Authority/              tiers, handles, per-instance claims
   Runtime/                live enemy registry, the Harmony gate
-Samples/ExampleMod/       a working consumer, all three tiers
+Samples/SurveyMod/        read-only recorder - what to run to help
+Samples/ExampleMod/       a working consumer, all three tiers (writes to enemies)
 annotations/example.json  every annotation field, commented
 docs/                     the action-class list this build was written against
 ```

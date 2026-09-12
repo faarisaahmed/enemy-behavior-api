@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <AssemblyName>EnemyBehaviorApi.Example</AssemblyName>
-    <RootNamespace>EnemyBehaviorApi.Example</RootNamespace>
+    <AssemblyName>EnemyBehaviorApi.Survey</AssemblyName>
+    <RootNamespace>EnemyBehaviorApi.Survey</RootNamespace>
     <!-- A sample; nobody consumes its XML docs. -->
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
@@ -43,6 +43,11 @@
       <Private>false</Private>
     </Reference>
     <!-- Input.GetKeyDown, for the demo hotkey -->
+    <!-- The survey writes its findings as JSON; the game already ships Newtonsoft -->
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(ManagedPath)/Newtonsoft.Json.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="UnityEngine.InputLegacyModule">
       <HintPath>$(ManagedPath)/UnityEngine.InputLegacyModule.dll</HintPath>
       <Private>false</Private>
@@ -50,7 +55,7 @@
   </ItemGroup>
 
   <Target Name="CopyToPlugins" AfterTargets="Build">
-    <Copy SourceFiles="$(TargetDir)$(AssemblyName).dll" DestinationFolder="$(GamePath)/BepInEx/plugins/EnemyBehaviorApi.Example/" />
+    <Copy SourceFiles="$(TargetDir)$(AssemblyName).dll" DestinationFolder="$(GamePath)/BepInEx/plugins/EnemyBehaviorApi.Survey/" />
   </Target>
 
 </Project>
