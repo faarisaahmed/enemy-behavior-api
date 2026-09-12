@@ -15,8 +15,20 @@ namespace EnemyBehaviorApi.Runtime
     /// <remarks>
     /// <c>Fsm.SwitchState</c> is the single method PlayMaker funnels all state changes
     /// through - transitions, global transitions, <c>SetState</c>, the FINISHED event, all
-    /// of it. One patch here covers everything an enemy can do, which is why this API does
+    /// of it. One patch here sees everything an enemy can do, which is why this API does
     /// not need to know anything about individual enemies.
+    ///
+    /// It observes only. Vetoing here hard-freezes the game, and it is worth recording why,
+    /// because the method looks like the obvious place to block a transition:
+    ///
+    ///     UpdateStateChanges:
+    ///       loop: SwitchState(switchToState)
+    ///             if (IsSwitchingState) goto loop
+    ///
+    /// <c>IsSwitchingState</c> is just <c>switchToState != null</c>, and only a completed
+    /// <c>SwitchState</c> clears it. A prefix returning false leaves the pending state set,
+    /// so the loop spins forever on the main thread. Suppression happens in
+    /// <see cref="FsmDecisionGate"/> instead, which runs before anything is pending.
     ///
     /// It is also on the hot path for the entire game: every FSM in the scene, every frame
     /// one of them moves. The ordering below is deliberate - a static bool, then a
@@ -49,6 +61,9 @@ namespace EnemyBehaviorApi.Runtime
             registry.EnemyUnregistered += _ => _armed = !registry.IsEmpty;
         }
 
+        /// <summary>True while a handle is firing a transition of its own.</summary>
+        internal static bool IsDriving => _driving;
+
         /// <summary>Runs <paramref name="action"/> with the gate open for transitions we cause.</summary>
         internal static void Drive(Action action)
         {
@@ -67,39 +82,24 @@ namespace EnemyBehaviorApi.Runtime
             public bool WasDriven;
         }
 
+        /// <summary>Records what is about to happen. Always lets the switch proceed.</summary>
         [HarmonyPrefix]
         [HarmonyPriority(Priority.First)]
-        public static bool Prefix(Fsm __instance, FsmState toState, out GateState __state)
+        public static void Prefix(Fsm __instance, FsmState toState, out GateState __state)
         {
             __state = default;
-            if (!_armed || toState == null) return true;
+            if (!_armed || toState == null) return;
 
             GameObject owner = __instance?.GameObject;
-            if (owner == null) return true;
+            if (owner == null) return;
 
             EnemyInstance enemy = _registry.ByFsmOwner(owner.GetInstanceID());
-            if (enemy == null) return true;
+            if (enemy == null) return;
 
             __state.Enemy = enemy;
             __state.PreviousState = __instance.ActiveStateName;
             __state.WasDriven = _driving;
             __state.Allowed = true;
-
-            var claim = _authority.ActiveOverride(enemy.InstanceId);
-            if (claim == null || !claim.SuppressionActive || _driving) return true;
-
-            // At this point the enemy is under someone else's control and is trying to move
-            // on its own. Whether that is allowed is the whole question of the Override
-            // tier.
-            if (claim.IsAlwaysAllowed(toState.Name)) return true;
-
-            bool veto = claim.Policy == OverridePolicy.SuppressAll ||
-                        claim.IsDecisionState(__instance.Name, __instance.ActiveStateName);
-
-            if (!veto) return true;
-
-            __state.Allowed = false;
-            return false;
         }
 
         [HarmonyPostfix]
