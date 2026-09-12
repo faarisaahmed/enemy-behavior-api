@@ -1,0 +1,37 @@
+<Project>
+
+  <!--
+    Where Silksong lives. The plugins reference the game's assemblies and copy their
+    output into BepInEx, so this is the one thing a new machine has to change.
+
+    Don't edit this file - create a LocalPaths.props next to it. It's gitignored, so your
+    path never lands in a commit:
+
+      <Project>
+        <PropertyGroup>
+          <GamePath>C:\Program Files (x86)\Steam\steamapps\common\Hollow Knight Silksong</GamePath>
+        </PropertyGroup>
+      </Project>
+
+    The import has to come first. GamePath is conditional, so whatever LocalPaths.props
+    sets wins; ManagedPath is then derived from the final value. With the import last, the
+    default would already have been baked into ManagedPath and the override would silently
+    do nothing.
+  -->
+  <Import Project="$(MSBuildThisFileDirectory)LocalPaths.props"
+          Condition="Exists('$(MSBuildThisFileDirectory)LocalPaths.props')" />
+
+  <PropertyGroup>
+    <GamePath Condition="'$(GamePath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Hollow Knight Silksong</GamePath>
+    <ManagedPath>$(GamePath)/Hollow Knight Silksong_Data/Managed</ManagedPath>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <!-- Consumers compile against this DLL, so the XML docs are part of the product. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+</Project>

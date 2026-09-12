@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "description": "FORMAT DOCUMENTATION ONLY - every value below is INVENTED. These are not real enemies, not real FSM state names, and not discovered data. The ids are deliberately impossible so this file can never match a real enemy if it is accidentally deployed. Copy the SHAPE, never the contents.",
+
+  "enemies": {
+    "EXAMPLE-NOT-A-REAL-ENEMY-1": {
+      "states": {
+        "Control/Lunge": {
+          "classify": "both",
+          "displayName": "Lunging Bite",
+          "shape": "Melee",
+          "mode": "Dash",
+          "tags": ["committed"],
+          "note": "Reflection saw the velocity actions and called it movement only. The hitbox is on a child that is already active, so there was no ActivateGameObject for the classifier to find."
+        },
+        "Control/Flinch": {
+          "classify": "none",
+          "note": "A hit reaction, not a behaviour. It classified as Displaced movement and cluttered the profile."
+        }
+      }
+    },
+
+    "EXAMPLE-NOT-A-REAL-ENEMY-2": {
+      "primaryFsm": "Control",
+      "ignoreFsms": ["Damage Response", "Audio", "Corpse/Control"],
+
+      "decisionStates": [
+        "Control/Choose Attack",
+        "Control/Phase 2 Choose"
+      ],
+
+      "states": {
+        "Control/Slash Antic": {
+          "displayName": "Slash wind-up",
+          "tags": ["telegraph"],
+          "telegraphFor": "attack:Control/Slash",
+          "note": "Named 'Antic' so the classifier tagged it, but it leads to two states so the auto-link would not commit."
+        },
+        "Control/Slash": {
+          "classify": "attack",
+          "displayName": "Thread Slash",
+          "shape": "Melee",
+          "damageAmount": 2
+        },
+        "Control/Needle Volley": {
+          "classify": "attack",
+          "shape": "Projectile",
+          "triggerEvents": ["BOSS VOLLEY"],
+          "note": "Only reachable via a global event another FSM broadcasts, so no transition points at it and Override could not find a way in."
+        },
+        "Arena Hazards/Control/Floor Spikes": {
+          "classify": "attack",
+          "shape": "Area",
+          "note": "Lives on a child object. The key is path/FsmName/StateName."
+        }
+      },
+
+      "parameters": {
+        "var:Control/Attack Cooldown": {
+          "displayName": "Time between attacks",
+          "min": 0.2,
+          "max": 6.0,
+          "note": "Below ~0.2 the animations overlap and the boss reads as glitched."
+        },
+        "move:Control/Chase/3.speed": {
+          "min": 0.0,
+          "max": 25.0
+        }
+      }
+    }
+  }
+}
