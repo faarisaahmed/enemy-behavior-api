@@ -11,7 +11,7 @@ using Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace EnemyBehaviorApi.Example
+namespace EnemyBehaviorApi.Survey
 {
     /// <summary>
     /// A read-only reconnaissance pass: claim every enemy at Observe, record what discovery
