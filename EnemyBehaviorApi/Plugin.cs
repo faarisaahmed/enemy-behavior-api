@@ -53,6 +53,7 @@ namespace EnemyBehaviorApi
             var authority = new AuthorityRegistry(msg => Log.LogWarning(msg));
 
             FsmTransitionGate.Install(registry, authority, msg => Log.LogError(msg));
+            FsmDecisionGate.Install(registry, authority);
             EnemyTracker.AutoRegister = _autoRegister.Value;
             EnemyTracker.Install(registry);
 
