@@ -24,6 +24,13 @@
   <PropertyGroup>
     <GamePath Condition="'$(GamePath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Hollow Knight Silksong</GamePath>
     <ManagedPath>$(GamePath)/Hollow Knight Silksong_Data/Managed</ManagedPath>
+
+    <!--
+      Where built plugins get installed. Override this in LocalPaths.props if you keep
+      mods in subfolders - BepInEx scans plugins/ recursively, so any layout works, and
+      hardcoding the flat one means a tidy-up silently breaks the build.
+    -->
+    <PluginRoot Condition="'$(PluginRoot)' == ''">$(GamePath)/BepInEx/plugins</PluginRoot>
   </PropertyGroup>
 
   <PropertyGroup>

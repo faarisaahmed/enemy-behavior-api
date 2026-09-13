@@ -50,7 +50,7 @@
   </ItemGroup>
 
   <Target Name="CopyToPlugins" AfterTargets="Build">
-    <Copy SourceFiles="$(TargetDir)$(AssemblyName).dll" DestinationFolder="$(GamePath)/BepInEx/plugins/EnemyBehaviorApi.Example/" />
+    <Copy SourceFiles="$(TargetDir)$(AssemblyName).dll" DestinationFolder="$(PluginRoot)/EnemyBehaviorApi.Example/" />
   </Target>
 
 </Project>
