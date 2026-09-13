@@ -156,6 +156,45 @@ namespace EnemyBehaviorApi
         public static IEnumerable<IEnemyHandle> ActiveHandles =>
             _authority?.ActiveHandles ?? Enumerable.Empty<IEnemyHandle>();
 
+        // ---- Authoritative transitions ---------------------------------------------------
+
+        /// <summary>
+        /// Runs <paramref name="action"/> with Override suppression bypassed, for transitions that
+        /// are being replayed rather than decided.
+        /// </summary>
+        /// <remarks>
+        /// Needed by anything that replicates enemy state from elsewhere - a multiplayer mod
+        /// applying the authoritative host's FSM state, a replay system, a save restore. Those
+        /// transitions are not the enemy choosing anything, so suppressing them is always wrong,
+        /// but they are indistinguishable from its own decisions at the point the gate sees them.
+        ///
+        /// Concretely: SSMP replicates enemy state on non-host clients through <c>Fsm.Event</c> and
+        /// <c>PlayMakerFSM.SendEvent</c>, both of which reach <c>Fsm.DoTransition</c>. With any
+        /// Override claim held locally, the gate would veto them and the enemy would silently stop
+        /// receiving state - desyncing in a way that looks like the networking is broken.
+        ///
+        /// Scope it as tightly as possible: anything inside this really does bypass authority.
+        /// </remarks>
+        public static void RunAuthoritative(Action action)
+        {
+            if (action == null) return;
+            Runtime.FsmTransitionGate.Drive(action);
+        }
+
+        /// <summary>
+        /// A scope form of <see cref="RunAuthoritative"/>, for when the replicated transitions do
+        /// not fit inside a single call.
+        /// </summary>
+        /// <example>
+        /// <code>
+        /// using (EnemyBehavior.AuthoritativeScope())
+        /// {
+        ///     fsm.SendEvent(replicatedEvent);
+        /// }
+        /// </code>
+        /// </example>
+        public static IDisposable AuthoritativeScope() => new Runtime.AuthoritativeToken();
+
         // ---- Annotations ----------------------------------------------------------------
 
         /// <summary>

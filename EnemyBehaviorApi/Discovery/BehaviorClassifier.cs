@@ -155,6 +155,10 @@ namespace EnemyBehaviorApi.Discovery
         /// Scores one subject against the table, with diminishing returns on a signal that
         /// has already matched.
         /// </summary>
+        /// <param name="into">The verdict being accumulated.</param>
+        /// <param name="subject">The action type name or state name being scored.</param>
+        /// <param name="signals">The table to score against.</param>
+        /// <param name="weight">Scales this source's contribution; name evidence weighs less than action evidence.</param>
         /// <param name="seen">
         /// Per-signal match counts across the whole state, or null to treat each call
         /// independently.

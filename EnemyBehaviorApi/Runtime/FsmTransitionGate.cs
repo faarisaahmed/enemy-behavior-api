@@ -64,6 +64,29 @@ namespace EnemyBehaviorApi.Runtime
         /// <summary>True while a handle is firing a transition of its own.</summary>
         internal static bool IsDriving => _driving;
 
+        /// <summary>Opens the gate until disposed. Backs <c>EnemyBehavior.AuthoritativeScope</c>.</summary>
+        internal static IDisposable Open()
+        {
+            bool previous = _driving;
+            _driving = true;
+            return new Restore(previous);
+        }
+
+        private sealed class Restore : IDisposable
+        {
+            private readonly bool _previous;
+            private bool _done;
+
+            public Restore(bool previous) => _previous = previous;
+
+            public void Dispose()
+            {
+                if (_done) return;
+                _done = true;
+                _driving = _previous;
+            }
+        }
+
         /// <summary>Runs <paramref name="action"/> with the gate open for transitions we cause.</summary>
         internal static void Drive(Action action)
         {
