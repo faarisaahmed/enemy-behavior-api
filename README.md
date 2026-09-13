@@ -219,6 +219,26 @@ it rather than trusting every descriptor equally.
 `SchemaVersion.Current` goes up on any schema change; `MinimumCompatible` goes up only on a
 breaking one. Check `SchemaVersion.IsCompatible` at startup.
 
+## Replicated transitions
+
+Anything that replays enemy state from elsewhere — a multiplayer mod applying the
+authoritative host's FSM state, a replay system, a save restore — must wrap those transitions:
+
+```csharp
+using (EnemyBehavior.AuthoritativeScope())
+{
+    fsm.SendEvent(replicatedEvent);
+}
+```
+
+Those transitions are not the enemy deciding anything, so suppressing them is always wrong —
+but at the point the gate sees them they are indistinguishable from its own decisions.
+
+This is not hypothetical. SSMP replicates enemy state on non-host clients through `Fsm.Event`
+and `PlayMakerFSM.SendEvent`, both of which reach `Fsm.DoTransition`. With any Override claim
+held locally, the gate vetoes them and the enemy silently stops receiving state — desyncing in
+a way that looks like the networking is broken rather than like an authority conflict.
+
 ## Annotations
 
 Reflection gets ordinary enemies right. Bosses are hand-built, spread across several FSMs,
