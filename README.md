@@ -1,11 +1,10 @@
 # Enemy Behavior API
 
-> **⚠️ In development — not ready to build a mod on.**
+> **⚠️ Alpha. The schema is not frozen - expect breaking changes.**
 >
-> The discovery engine works and is measured against real play sessions. The **Observe**
-> tier is tested. **Influence and Override have never once executed in game** - see
-> [Status](#status) before depending on anything here. The schema is **not frozen**;
-> expect breaking changes.
+> Discovery and the **Observe** tier are measured against real play sessions. **Influence**
+> and **Override** work, but have far less mileage - each has had one real bug found and
+> fixed by hand-driving an enemy. See [Status](#status) before depending on one.
 >
 > What would help most right now: run the survey plugin and send back the JSON it writes.
 > That is what the classifier is calibrated from, and more enemies means a better one.
@@ -19,25 +18,31 @@ No per-enemy list. Point it at a GameObject and it tells you what that enemy can
 
 ## Status
 
-Measured across two recorded sessions: 18 enemy kinds, 16 scenes, 2 bosses (Moss Grotto,
-The Marrow, Bell Beasts).
+There is no per-enemy support list. Discovery derives everything from the object in front
+of it, so an enemy this has never seen works exactly like one it has. The numbers below are
+**sample size, not coverage**: 18 enemy kinds, 16 scenes and 2 bosses across two recorded
+sessions (Moss Grotto, The Marrow, Bell Beasts).
 
 | Area | State |
 |---|---|
 | Enemy discovery, FSM scanning, state/action/parameter extraction | **Works** - measured |
 | Per-instance handles, authority arbitration, event stream | **Works** - measured |
-| Harmony gate on `Fsm.SwitchState` | **Works** - no crashes across 18 enemy kinds |
+| Harmony gates on `Fsm.DoTransition` and `Fsm.SwitchState` | **Works** - no crashes across 18 enemy kinds |
 | Attack/movement classification | **Usable, imperfect** - calibrated against real sessions |
 | Decision-state detection (for Override) | **Works** - finds branch states on bosses |
 | Speed extraction | **Partial** - 59/152 movements resolve a speed |
 | Damage extraction | **Poor** - 48/53 attacks still report 0 |
-| **Influence tier** (parameter writes, revert-on-dispose) | **NEVER EXECUTED** |
-| **Override tier** (`Fire`, transition veto, passlist) | **NEVER EXECUTED** |
+| **Influence tier** (parameter writes, revert-on-dispose) | **Works, lightly tested** |
+| **Override tier** (`Fire`, transition veto, passlist) | **Works, lightly tested** - two bugs found and fixed in real use |
 
-The two untested tiers are untested because every session so far ran Observe-only. The
-risk worth naming: if the Override passlist is wrong, a mod holding Override could stop an
-enemy's death transition and make it effectively immortal. Do not ship a mod built on
-Override until that path has been exercised.
+Every recorded survey session ran Observe-only, so the higher tiers carry none of that
+mileage. What they do have is real use: Override is hand-driven by the
+[Enemy Puppeteer](https://github.com/faarisaahmed/enemy-puppeteer), which is how both the
+v0.2.2 hard freeze and the v0.2.3 multiplayer desync were found and fixed.
+
+The risk still worth naming: if the Override passlist is wrong, a mod holding Override
+could stop an enemy's death transition and make it effectively immortal. The passlist has
+not been seen to fail - but it has not been exercised across many enemies either.
 
 ### Known-wrong things
 
@@ -98,10 +103,11 @@ which actions it holds, without knowing anything about the enemy it belongs to.
 
 Two facts about PlayMaker do most of the work:
 
-- **`Fsm.SwitchState` is the only way a state change happens.** Transitions, global
-  transitions, `SetState`, the `FINISHED` event - all of it funnels through that one
-  method. A single Harmony patch there gives both the Observe tier's event stream and the
-  Override tier's veto.
+- **State changes funnel through two methods, and they split cleanly.** `Fsm.DoTransition`
+  runs *before* a state change is queued and returns a bool, so refusing there means the
+  transition simply never happens - that is the Override tier's veto. `Fsm.SwitchState` runs
+  when a change commits, which makes it the place to watch - that is the Observe tier's event
+  stream. Vetoing `SwitchState` instead hard-freezes the game; v0.2.2 fixed that.
 - **`FsmStateAction.Enabled` is public and settable, and action fields are plain
   reflection targets.** That is the Influence tier: change the numbers a designer typed in,
   without touching the enemy's decision-making.
@@ -201,7 +207,7 @@ handle.Fire(attack.Id);
 handle wrote, releases Override, and unsubscribes. A handle left on an enemy that dies gets
 cleaned up with the instance - but until then it holds Override against everyone else.
 
-`Samples/ExampleMod` is a working mod exercising all three tiers; press F9 in game to
+`Samples/ExampleMod` is a working mod exercising all three tiers; press F12 in game to
 cycle.
 
 ## Schema
@@ -314,7 +320,7 @@ EnemyBehaviorApi/
   Discovery/              FSM scanning, the signal table, classification
   Annotations/            JSON corrections
   Authority/              tiers, handles, per-instance claims
-  Runtime/                live enemy registry, the Harmony gate
+  Runtime/                live enemy registry, the Harmony gates
 Samples/SurveyMod/        read-only recorder - what to run to help
 Samples/ExampleMod/       a working consumer, all three tiers (writes to enemies)
 annotations/example.json  every annotation field, commented
@@ -323,6 +329,10 @@ docs/                     the action-class list this build was written against
 
 ## Known limits
 
+- **`Fsm.SetState` bypasses suppression.** The veto lives on `Fsm.DoTransition`, and
+  `SetState` does not route through it - so an enemy that drives itself with `SetState` keeps
+  going even under `SuppressAll`. That is the safe direction to be wrong in: slightly less
+  control, rather than a frozen game.
 - **Identity is name-based.** Enemy ids come from the prefab name with Unity's `(Clone)`
   and ` (1)` suffixes stripped. Two genuinely different enemies sharing a name need an
   annotation to tell apart.
@@ -332,9 +342,10 @@ docs/                     the action-class list this build was written against
 - **Parameters address actions by index.** Stable within a build, not across one. Writes
   check the action's type name first, so a game update turns a moved action into a failed
   call rather than a corrupted enemy.
-- **The classifier is calibrated against one session** (Moss Grotto: Bone Thumper,
-  MossBone Fly, MossBone Crawler, MossBone Cocoon). It is measured, not guessed - but four
-  enemy kinds is a small sample, and no boss is in it. Expect to keep adjusting
+- **The classifier is tuned against four enemy kinds** (Moss Grotto: Bone Thumper,
+  MossBone Fly, MossBone Crawler, MossBone Cocoon) - a subset of the 18 it has been
+  *measured* across. It is measured, not guessed - but four is a small sample, and no boss
+  is in it. Expect to keep adjusting
   `SignalTable`; `EnemyProfile.AllStates` carries the score behind every verdict so you can
   see exactly why something was missed.
 - **A sustained attack's damage is armed one state earlier.** Discovery propagates a live
